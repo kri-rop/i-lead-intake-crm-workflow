@@ -34,13 +34,19 @@ Gmail Trigger
 
 ![Workflow overview](images/workflow_overview.png)
 
+[Open workflow image in full size](images/workflow_overview.png)
+
 ## CRM Result
 
 ![HubSpot contact](images/hubspot_contact.png)
 
+[Open CRM result in full size](images/hubspot_contact.png)
+
 ## Response Draft
 
 ![Gmail draft](images/gmail_draft.png)
+
+[Open response draft in full size](images/gmail_draft.png)
 
 ## Process Logic
 
