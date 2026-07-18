@@ -30,6 +30,17 @@ Gmail Trigger
 → Gmail Draft Creation
 → Human Review
 ```
+## Workflow Preview
+
+![Workflow overview](images/workflow_overview.png)
+
+## CRM Result
+
+![HubSpot contact](images/hubspot_contact.png)
+
+## Response Draft
+
+![Gmail draft](images/gmail_draft.png)
 
 ## Process Logic
 
