@@ -1,0 +1,445 @@
+{
+  "name": "AI Lead Intake und CRM Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        112,
+        0
+      ],
+      "id": "900b419f-617c-4ff6-aa0b-3eebe3504030",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $json.content?.[0]?.text;\n\nif (!rawText) {\n  return [\n    {\n      json: {\n        parsing_error: true,\n        error_message: \"Claude hat keinen auswertbaren Text geliefert\"\n      }\n    }\n  ];\n}\n\ntry {\nconst cleanedText = rawText\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\n  const parsedData = JSON.parse(cleanedText);\n\n  return [\n    {\n      json: {\n        ...parsedData,\n        parsing_error: false\n      }\n    }\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        parsing_error: true,\n        error_message: error.message,\n        raw_response: rawText\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        0
+      ],
+      "id": "8ebebbf7-f94e-42ea-b42b-c09fdc706014",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "search",
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "value": "={{ $json.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1520,
+        -112
+      ],
+      "id": "5c16bdc4-8970-4d73-8e8c-5c5c62b1578c",
+      "name": "Search contacts",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Ihre Anfrage bei Nordstern Digital Solutions: {{ $('Code in JavaScript').item.json.kategorie }}",
+        "message": "={{ $('Code in JavaScript').item.json.antwortentwurf }}",
+        "options": {
+          "sendTo": "={{ $('Code in JavaScript').item.json.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2160,
+        -96
+      ],
+      "id": "e5e1a4f4-3bc4-4a90-a0f2-ce5977ab20e7",
+      "name": "Create a draft"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dadf5af2-2cef-4183-8462-1a314bd8dc85",
+              "leftValue": "={{ $json.parsing_error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        0
+      ],
+      "id": "ac36ab48-bf4f-4dff-83f8-2d16014d3b57",
+      "name": "JSON Valid?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49629fc2-62c2-4848-bd01-b65b071c9f75",
+              "leftValue": "={{ $json.crm_relevant }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1328,
+        -224
+      ],
+      "id": "406a167b-71b6-48f8-8064-672672a76584",
+      "name": "CRM Relevant?"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $('Code in JavaScript').item.json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $('Code in JavaScript').item.json.unternehmen }}",
+          "customPropertiesUi": {
+            "customPropertiesValues": [
+              {
+                "property": "anfragekategorie",
+                "value": "={{ $('Code in JavaScript').item.json.kategorie }}"
+              },
+              {
+                "property": "anfrageprioritat",
+                "value": "={{ $('Code in JavaScript').item.json.prioritaet }}"
+              }
+            ]
+          },
+          "firstName": "={{ $('Code in JavaScript').item.json.name.split(' ')[0] }}",
+          "lastName": "={{ $('Code in JavaScript').item.json.name.split(' ').slice(1).join(' ') }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1952,
+        -96
+      ],
+      "id": "50ecdc35-e9c6-4f13-82e3-370cb9728e48",
+      "name": "Create New Contact"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $('Code in JavaScript').item.json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $('Code in JavaScript').item.json.unternehmen }}",
+          "customPropertiesUi": {
+            "customPropertiesValues": [
+              {
+                "property": "anfragekategorie",
+                "value": "={{ $('Code in JavaScript').item.json.kategorie }}"
+              },
+              {
+                "property": "anfrageprioritat",
+                "value": "={{ $('Code in JavaScript').item.json.prioritaet }}"
+              }
+            ]
+          },
+          "firstName": "={{ $('Code in JavaScript').item.json.name.split(' ')[0] }}",
+          "lastName": "={{ $('Code in JavaScript').item.json.name.split(' ').slice(1).join(' ') }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1952,
+        96
+      ],
+      "id": "b5e8c95d-e582-46cd-bc0c-27cf930d2b27",
+      "name": "Update Existing Contact"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analysiere die folgende E Mail.\n\nGib ausschließlich gültiges JSON zurück.\n\nVerwende exakt diese Struktur:\n\n{\n  \"name\": \"\",\n  \"email\": \"\",\n  \"unternehmen\": \"\",\n  \"anliegen\": \"\",\n  \"kategorie\": \"\",\n  \"prioritaet\": \"\",\n  \"begruendung_prioritaet\": \"\",\n  \"crm_relevant\": true,\n  \"antwortentwurf\": \"\"\n}\n\nRegeln für crm_relevant:\n\nSetze \"crm_relevant\" nur dann auf true, wenn die Nachricht eine externe Kundenanfrage, Projektanfrage, Demoanfrage, Beratungsanfrage oder Supportanfrage enthält.\n\nSetze \"crm_relevant\" auf false bei privaten Nachrichten, internen Nachrichten, Newslettern, automatischen Benachrichtigungen, Bewerbungen und Nachrichten ohne Kundenbezug.\n\nRegeln für die Kategorie:\n\nErlaubte Kategorien sind ausschließlich:\n\nBeratung\nDemo\nProjektanfrage\nSupport\nSonstiges\n\nRegeln für die Priorität:\n\nErlaubte Prioritäten sind ausschließlich:\n\nNiedrig\nMittel\nHoch\n\nVergib \"Hoch\" nur bei erkennbarer Dringlichkeit, konkreter Frist oder einem akuten Problem.\n\nRegeln für den Antwortentwurf:\n\nErstelle einen kurzen, professionellen Antwortentwurf für die Kundenanfrage.\n\nDer Antwortentwurf soll:\n\ndie Anfrage bestätigen\ndas Anliegen kurz aufgreifen\nkeine Preise, Fristen oder Leistungen verbindlich zusagen\nauf eine persönliche Rückmeldung verweisen\nin derselben Sprache wie die Anfrage formuliert sein\n\nWenn \"crm_relevant\" false ist, lasse \"antwortentwurf\" leer.\n\nWeitere Regeln:\n\nVerwende für das Feld \"email\" ausschließlich eine E Mail Adresse aus dem eigentlichen Nachrichtentext.\n\nIgnoriere technische Absenderadressen, Empfängeradressen und E Mail Header.\n\nWenn eine Information nicht eindeutig vorhanden ist, gib einen leeren String zurück.\n\nKundenanfrage:\n{{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        352,
+        0
+      ],
+      "id": "80d7bc6e-4444-4e1a-86ac-12a7c4b77565",
+      "name": "Analyze Inquiry with Claude"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "802d2ecb-bfa3-4de8-b731-4c9f67c28eb6",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -112
+      ],
+      "id": "8acbba06-0c6f-4404-8599-a31dd734ff24",
+      "name": "Contact Email Available?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "522b235a-8f5d-459a-b86b-c1ca6169c7d6",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1712,
+        -112
+      ],
+      "id": "029ed950-14f7-4940-80d5-1a040178d86b",
+      "name": "New Contact?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Analyze Inquiry with Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search contacts": {
+      "main": [
+        [
+          {
+            "node": "New Contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Contact Email Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Relevant?": {
+      "main": [
+        [
+          {
+            "node": "Search contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Contact": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Contact": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Inquiry with Claude": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact Email Available?": {
+      "main": [
+        [
+          {
+            "node": "CRM Relevant?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Contact?": {
+      "main": [
+        [
+          {
+            "node": "Create New Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Existing Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
